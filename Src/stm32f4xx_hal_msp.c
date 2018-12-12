@@ -91,7 +91,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* hcan)
 {
 
   GPIO_InitTypeDef GPIO_InitStruct;
-  if(hcan->Instance==CAN1)
+  if(hcan->CANInstance==CAN1)
   {
   /* USER CODE BEGIN CAN1_MspInit 0 */
 
@@ -105,7 +105,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* hcan)
     */
     GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_12;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF9_CAN1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -123,7 +123,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* hcan)
 void HAL_CAN_MspDeInit(CAN_HandleTypeDef* hcan)
 {
 
-  if(hcan->Instance==CAN1)
+  if(hcan->CANInstance==CAN1)
   {
   /* USER CODE BEGIN CAN1_MspDeInit 0 */
 

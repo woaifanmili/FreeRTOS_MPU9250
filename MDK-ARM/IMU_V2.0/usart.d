@@ -34,4 +34,4 @@ imu_v2.0\usart.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h
 imu_v2.0\usart.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h
 imu_v2.0\usart.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
 imu_v2.0\usart.o: ..\Peripherals\delay\delay.h
-imu_v2.0\usart.o: ..\Peripherals\HARDWARE\inc\mpu6500.h
+imu_v2.0\usart.o: ..\Peripherals\HARDWARE\inc\mpu9250.h

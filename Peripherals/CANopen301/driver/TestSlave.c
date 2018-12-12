@@ -849,7 +849,7 @@ OD_OI_TypeDef TestSlave_Index2006[] =
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////×ËÌ¬½ÇÊý¾Ýpitch roll yaw
 extern OD_OI_TypeDef IMU_Data[];
-
+int32_t EULER[3];
 OD_OI_TypeDef Number_IMU_Data[] =
 {
     {"IMU data",        0x2F0400FF, OD_OBJCODE_ARRAY,  OD_DATATYPE_I32,    OD_ACCESS_RW,  (void *)&IMU_Data, 3, NULL, "pitch roll yaw"},	
@@ -857,9 +857,9 @@ OD_OI_TypeDef Number_IMU_Data[] =
 
 OD_OI_TypeDef IMU_Data[] = 
 { 
-    {"pitch state",     0x2F040001, OD_OBJCODE_VAR, OD_DATATYPE_I32, OD_ACCESS_RW, (void *)&PIT, 0, NULL, "¸©Ñö½Ç" },
-    {"roll state",      0x2F040002, OD_OBJCODE_VAR, OD_DATATYPE_I32, OD_ACCESS_RW, (void *)&ROL, 0, NULL, "·­¹ö½Ç" },
-    {"yaw state",       0x2F040003, OD_OBJCODE_VAR, OD_DATATYPE_I32, OD_ACCESS_RW, (void *)&YAW, 0, NULL, "Æ«º½½Ç" },
+    {"pitch state",     0x2F040001, OD_OBJCODE_VAR, OD_DATATYPE_I32, OD_ACCESS_RW, (void *)&EULER[0], 0, NULL, "¸©Ñö½Ç" },
+    {"roll state",      0x2F040002, OD_OBJCODE_VAR, OD_DATATYPE_I32, OD_ACCESS_RW, (void *)&EULER[1], 0, NULL, "·­¹ö½Ç" },
+    {"yaw state",       0x2F040003, OD_OBJCODE_VAR, OD_DATATYPE_I32, OD_ACCESS_RW, (void *)&EULER[2], 0, NULL, "Æ«º½½Ç" },
 
 };
 
@@ -899,7 +899,7 @@ OD_OI_TypeDef  TestSlave_objdict[]=
 	{"Mapped variable SDO1", 				0x20050000, OD_OBJCODE_VAR, 	TIME, 				OD_ACCESS_RW, 	(void *)&timetest2, 						0, NULL, "SDO·þÎñÆ÷²ÎÊý" },
 	{"Mapped variable SDO1", 				0x20060000, OD_OBJCODE_VAR, 	COST, 				OD_ACCESS_RW, 	(void *)&cost1, 							0, NULL, "SDO·þÎñÆ÷²ÎÊý" },
 
-	{"IMU data",                            0x2F0400FF, OD_OBJCODE_ARRAY,  OD_DATATYPE_I32,    OD_ACCESS_RW,  (void *)&IMU_Data,                            3, NULL, "pitch roll yaw"},	
+	{"IMU data",            0x2F0400FF, OD_OBJCODE_ARRAY,  OD_DATATYPE_I32,    OD_ACCESS_RW,  (void *)&IMU_Data,             3, NULL, "pitch roll yaw"},	
 };
 
 

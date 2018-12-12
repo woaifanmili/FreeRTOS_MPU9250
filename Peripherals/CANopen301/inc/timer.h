@@ -48,7 +48,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //typedef void (*TimerCallback_t)(CO_Data* d, UNS32 id);
 
 void TimeDispatch(CO_Data* d);
-
+void canTransmit(void);
 /**
  * @ingroup timer
  * @brief Set a timerfor a given time.

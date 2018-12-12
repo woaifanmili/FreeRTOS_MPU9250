@@ -165,7 +165,7 @@ struct struct_CO_Data {
 	
 	/* General */
 	UNS8 toggle;                        /* 0 */
-	CAN_PORT canHandle;	                /* NULL */  //CAN1, CAN2... hardware relative
+	CAN_PORT CANInstance;	                /* NULL */  //CAN1, CAN2... hardware relative
 //	scanIndexOD_t scanIndexOD;          /* TestSlave_scanIndexOD */
 	storeODSubIndex_t storeODSubIndex;  /* _storeODSubIndex */
 	
@@ -192,7 +192,7 @@ struct struct_CO_Data {
 // new added data container to store can port and some global info,
 // which make the canfestival protocal avilable to support more than one can station in one microcontroller
 	UNS16 can_port_num;               //1,2,3,4...
-	TIM_PORT can_timer_handle;          //TIM1, TIM2... hardware relative
+	TIM_PORT Instance;          //TIM1, TIM2... hardware relative
     s_timer_entry timers[MAX_NB_TIMER];	
     TIMER_HANDLE last_timer_raw;	  // -1
 	int totalobjnum;                  // 0

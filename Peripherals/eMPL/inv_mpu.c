@@ -24,7 +24,7 @@
 #include <math.h>
 #include "inv_mpu.h"
 #include "inv_mpu_dmp_motion_driver.h"
-#include "mpu6500.h"
+#include "mpu9250.h"
 #include "iic.h"
 //#include "delay.h"
 //#include "usart.h"

@@ -37,7 +37,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "TestSlave.h"
 #include "CANopenMaster.h"
 #include "TIM.h"
-
+//#include "stm32f4xx_hal_tim.h"
 
 int watch_overrun=0;
 
@@ -55,8 +55,8 @@ int watch_overrun=0;
 /* 设置ARR的值，让定时器在value微秒之后进入中断服务函数 */
 void setTimer(TIMEVAL value, CO_Data* d)
 {
-	uint32_t timer = TIM_GetCounter(d->can_timer_handle);
-	TIM_SetAutoreload(d->can_timer_handle, (value + timer) % (0xFFFFFFFF));
+	uint32_t timer = __HAL_TIM_GET_COUNTER(d);
+	__HAL_TIM_SET_AUTORELOAD(d, (value + timer) % (0xFFFFFFFF));
 }
 /**
   * @brief  getElapsedTime
@@ -66,7 +66,7 @@ void setTimer(TIMEVAL value, CO_Data* d)
 /* 计算距离进入中断过去了多长时间 */
 TIMEVAL getElapsedTime(CO_Data* d)
 {
-	uint32_t timer = TIM_GetCounter(d->can_timer_handle);
+	uint32_t timer = __HAL_TIM_GET_COUNTER(d);
     
     if(timer < d->last_time_set)
     {
@@ -106,7 +106,7 @@ UNS32 set_clock_monoflop_times = 0;
 
 TIMER_HANDLE SetAlarm(CO_Data* d, UNS32 id, TimerCallback_t callback, TIMEVAL value, TIMEVAL period)//#define TIMEVAL UNS32
 {
-    CAN_ITConfig(d->canHandle, CAN_IT_FMP0, DISABLE);//该函数不允许被中断打断
+    __HAL_CAN_DISABLE_IT(d,CAN_IT_RX_FIFO0_MSG_PENDING);//该函数不允许被中断打断
     
 	TIMER_HANDLE row_number;//#define TIMER_HANDLE INTEGER16
 	s_timer_entry *row;
@@ -191,7 +191,7 @@ SetAlarm设置定时器事件的时候函数的返回值就是他们申请到的结构体编号） */
 int bugle = 0;
 TIMER_HANDLE DelAlarm(TIMER_HANDLE handle,TimerCallback_t callback, CO_Data* d)
 {
-    CAN_ITConfig(d->canHandle, CAN_IT_FMP0, DISABLE);//该函数不允许被中断打断
+    __HAL_CAN_DISABLE_IT(d,CAN_IT_RX_FIFO0_MSG_PENDING);//该函数不允许被中断打断
 	/* Quick and dirty. system timer will continue to be trigged, but no action will be preformed. */
 	MSG_WAR(0x3320, "DelAlarm. handle = ", handle);
 	if(handle != TIMER_NONE)/*#define TIMER_NONE -1 设置过的定时器事件都能满足这个条件，因为SetAlarm的返回值为结构体编号（本工程为0~7） */
@@ -302,29 +302,11 @@ void TimeDispatch(CO_Data* d)
 	}
 }
 
-
-void TIM_CANopenSlaveStart(void)
-{    	
-    TIM_CANopenSlaveConfig();
-}
-
-
-void TIM_CANopenMasterStart(void)
-{    	
-    TIM_CANopenMasterConfig();
-}
-
-
-// IRQ: CANopen_slave_node
-void TIM_CANopenSlaveIRQHandler(void)
+//// IRQ: CANopen_slave_node
+void canTransmit(void)
 {
-	if (TIM_GetITStatus(TIM_CANOPEN_SLAVE, TIM_IT_Update) != RESET)
-	{
-		TestSlave_Data.last_time_set = TIM_GetCounter(TIM_CANOPEN_SLAVE);
+		TestSlave_Data.last_time_set = __HAL_TIM_GET_COUNTER(&TIM_CANOPEN_SLAVE);
 
-		TimeDispatch(&TestSlave_Data);
-        
-    TIM_ClearITPendingBit(TIM_CANOPEN_SLAVE, TIM_IT_Update);
-	}
+		TimeDispatch(&TestSlave_Data);    
 }
 

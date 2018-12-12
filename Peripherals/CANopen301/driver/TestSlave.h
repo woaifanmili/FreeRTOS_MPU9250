@@ -95,7 +95,7 @@ extern OD_OI_TypeDef TestSlave_objdict[];
 
 //////////////////////////////////////////
 /* added new data*/
-extern int PIT,ROL,YAW;
+//extern int PIT,ROL,YAW;
 
 
 #endif // TESTSLAVE_H

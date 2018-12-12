@@ -46,6 +46,28 @@
   *
   ******************************************************************************
   */
+  /*重大修改：为满足CANopen同时使用CAN和TIM中断标志清零
+  	一、struct struct_CO_Data定义中
+    CACAN_PORT CANInstance;  原canHandle
+    TIM_PORT Instance;    原can_timer_handle
+    二、修改HAL库中的宏定义：
+        1.#define __HAL_CAN_DISABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->CANInstance->IER) &= ~(__INTERRUPT__))
+        原为：#define __HAL_CAN_DISABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->IER) &= ~(__INTERRUPT__))
+        2.#define __HAL_CAN_ENABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->CANInstance->IER) |= (__INTERRUPT__))
+        原为：#define __HAL_CAN_ENABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->IER) |= (__INTERRUPT__))
+        3.#define __HAL_CAN_CLEAR_FLAG(__HANDLE__, __FLAG__) \
+  ((((__FLAG__) >> 8U) == 5U)? (((__HANDLE__)->CANInstance->TSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
+   (((__FLAG__) >> 8U) == 2U)? (((__HANDLE__)->CANInstance->RF0R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
+   (((__FLAG__) >> 8U) == 4U)? (((__HANDLE__)->CANInstance->RF1R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
+   (((__FLAG__) >> 8U) == 1U)? (((__HANDLE__)->CANInstance->MSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): 0U)
+        原为：#define __HAL_CAN_CLEAR_FLAG(__HANDLE__, __FLAG__) \
+  ((((__FLAG__) >> 8U) == 5U)? (((__HANDLE__)->Instance->TSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
+   (((__FLAG__) >> 8U) == 2U)? (((__HANDLE__)->Instance->RF0R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
+   (((__FLAG__) >> 8U) == 4U)? (((__HANDLE__)->Instance->RF1R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
+   (((__FLAG__) >> 8U) == 1U)? (((__HANDLE__)->Instance->MSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): 0U)
+    三、其他用到canHandle和can_timer_handle的地方
+    */
+  
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_hal.h"
@@ -56,9 +78,14 @@
 #include "iic.h"
 #include "usart.h"
 
-#include "mpu6500.h"
+/*MPU9250 config and DMP lib port*/
+#include "mpu9250.h"
 #include "inv_mpu.h"
 #include "inv_mpu_dmp_motion_driver.h"
+
+/*CANopen301 port*/
+#include "TestSlave.h"
+#include "CANopenInit.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -70,17 +97,13 @@ UART_HandleTypeDef huart1;
 
 osThreadId TaskIMUdataHandle;
 osThreadId TaskUSARTTxHandle;
-osThreadId TaskCANTxHandle;
-osThreadId TaskCANRxHandle;
+osThreadId TaskCANopenUpdateHandle;
 osMessageQId QueueUSARTTxHandle;
-osMessageQId QueueCANTxHandle;
-osMessageQId QueueCANRxHandle;
-osSemaphoreId BinarySemUSARTHandle;
-osSemaphoreId BinarySemCANRxHandle;
+osMessageQId QueueCANopenUpdateHandle;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+extern int32_t EULER[];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,8 +114,7 @@ static void MX_TIM2_Init(void);
 static void MX_USART1_UART_Init(void);
 void FunctionIMUdata(void const * argument);
 void FunctionUSARTTx(void const * argument);
-void FunctionCANTx(void const * argument);
-void FunctionCANRx(void const * argument);
+void FunctionCANopenUpdate(void const * argument);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -137,21 +159,13 @@ int main(void)
   MX_TIM2_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  CanopenInit();
   mpu_dmp_init();
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
-
-  /* Create the semaphores(s) */
-  /* definition and creation of BinarySemUSART */
-  osSemaphoreDef(BinarySemUSART);
-  BinarySemUSARTHandle = osSemaphoreCreate(osSemaphore(BinarySemUSART), 1);
-
-  /* definition and creation of BinarySemCANRx */
-  osSemaphoreDef(BinarySemCANRx);
-  BinarySemCANRxHandle = osSemaphoreCreate(osSemaphore(BinarySemCANRx), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -171,12 +185,8 @@ int main(void)
   TaskUSARTTxHandle = osThreadCreate(osThread(TaskUSARTTx), NULL);
 
   /* definition and creation of TaskCANTx */
-  osThreadDef(TaskCANTx, FunctionCANTx, osPriorityBelowNormal, 0, 128);
-  TaskCANTxHandle = osThreadCreate(osThread(TaskCANTx), NULL);
-
-  /* definition and creation of TaskCANRx */
-  osThreadDef(TaskCANRx, FunctionCANRx, osPriorityNormal, 0, 128);
-  TaskCANRxHandle = osThreadCreate(osThread(TaskCANRx), NULL);
+  osThreadDef(TaskCANopenUpdate, FunctionCANopenUpdate, osPriorityLow, 0, 128);
+  TaskCANopenUpdateHandle = osThreadCreate(osThread(TaskCANopenUpdate), &EULER);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -190,13 +200,8 @@ int main(void)
 
   /* definition and creation of QueueCANTx */
 /* what about the sizeof here??? cd native code */
-  osMessageQDef(QueueCANTx, 16, IMUData_t);
-  QueueCANTxHandle = osMessageCreate(osMessageQ(QueueCANTx), NULL);
-
-  /* definition and creation of QueueCANRx */
-/* what about the sizeof here??? cd native code */
-  osMessageQDef(QueueCANRx, 16, uint16_t);
-  QueueCANRxHandle = osMessageCreate(osMessageQ(QueueCANRx), NULL);
+  osMessageQDef(QueueCANopenUpdate, 16, IMUData_t);
+  QueueCANopenUpdateHandle = osMessageCreate(osMessageQ(QueueCANopenUpdate), NULL);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -283,7 +288,7 @@ void SystemClock_Config(void)
 static void MX_CAN1_Init(void)
 {
 
-  hcan1.Instance = CAN1;
+  hcan1.CANInstance = CAN1;
   hcan1.Init.Prescaler = 6;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
@@ -294,12 +299,28 @@ static void MX_CAN1_Init(void)
   hcan1.Init.AutoWakeUp = DISABLE;
   hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
-  hcan1.Init.TransmitFifoPriority = ENABLE;
+  hcan1.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
-
+  
+  CAN_FilterTypeDef hcan1FilterConfig;
+  
+  hcan1FilterConfig.FilterActivation = ENABLE;
+  hcan1FilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+  hcan1FilterConfig.FilterIdHigh = 0x0000;
+  hcan1FilterConfig.FilterIdLow = 0x0000;
+  hcan1FilterConfig.FilterMaskIdHigh = 0x0000;
+  hcan1FilterConfig.FilterMaskIdLow = 0x0000;
+  hcan1FilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  hcan1FilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  if(HAL_CAN_ConfigFilter(&hcan1,&hcan1FilterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }  
+  
+  HAL_CAN_Start(&hcan1);
 }
 
 /* TIM2 init function */
@@ -312,7 +333,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 84-1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 0xFFFFFFFF;
+  htim2.Init.Period = 0XFFFFFFFF;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
@@ -331,7 +352,8 @@ static void MX_TIM2_Init(void)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
-
+  
+  HAL_TIM_Base_Start_IT(&htim2);
 }
 
 /* USART1 init function */
@@ -408,22 +430,23 @@ void FunctionIMUdata(void const * argument)
 {
 
   /* USER CODE BEGIN 5 */
-  int16_t sLightcnt=0;
+  int16_t sLightcnt = 0;
   /* Infinite loop */
   for(;;)
   {
     IMUData_t IMU;  
     
-    if(mpu_dmp_get_data(&IMU.Euler.pitch,&IMU.Euler.roll,&IMU.Euler.yaw)==0)     //角度顺序有问题，尚不清楚原因，可能是芯片方向。约75ms可以采样到一次 
+    if(mpu_dmp_get_data(&IMU.Euler.pitch,&IMU.Euler.roll,&IMU.Euler.yaw) == 0)     //角度顺序有问题，尚不清楚原因，可能是芯片方向。约75ms可以采样到一次 
     {      
       /*采样温度和陀螺仪加速度计原始数据*/
       IMU.temp=MPU_Get_Temperature();	//得到温度值    
-      MPU_Get_Gyroscope(&IMU.gyro.x,&IMU.gyro.y,&IMU.gyro.z);	//得到陀螺仪数据
-      MPU_Get_Accelerometer(&IMU.acc.x,&IMU.acc.y,&IMU.acc.z);	//得到加速度传感器数据
+      MPU_Get_Gyroscope(&IMU.gyro.x, &IMU.gyro.y, &IMU.gyro.z);	//得到陀螺仪数据
+      MPU_Get_Accelerometer(&IMU.acc.x, &IMU.acc.y, &IMU.acc.z);	//得到加速度传感器数据
       /*发送数据至串口队列*/
-      xQueueSend(QueueUSARTTxHandle,&IMU,10); 
+      xQueueSend(QueueUSARTTxHandle, &IMU, 10);
+      xQueueSend(QueueCANopenUpdateHandle, &IMU, 10);       
       /*LED1 闪烁表示采样中*/
-      if(!(sLightcnt%=10))
+      if(!(sLightcnt %= 10))
         HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_14);
       sLightcnt++;        
     }   
@@ -467,35 +490,28 @@ void FunctionUSARTTx(void const * argument)
 * @retval None
 */
 /* USER CODE END Header_FunctionCANTx */
-void FunctionCANTx(void const * argument)
+void FunctionCANopenUpdate(void const * argument)
 {
   /* USER CODE BEGIN FunctionCANTx */
+  BaseType_t xStatus;
+  int32_t *euler = (int32_t *)argument;
   /* Infinite loop */
   for(;;)
   {
+    IMUData_t IMU; 
+    /*the task will remain in the Blocked state to wait for data to be available*/
+    xStatus=xQueueReceive(QueueCANopenUpdateHandle,&IMU,0);
     
-    osDelay(1);
+    if(xStatus == pdPASS)
+    {
+      euler[0] = (int32_t)(IMU.Euler.pitch*100);
+      euler[1] = (int32_t)(IMU.Euler.roll*100);
+      euler[2] = (int32_t)(IMU.Euler.yaw*100);
+    }      
   }
   /* USER CODE END FunctionCANTx */
 }
 
-/* USER CODE BEGIN Header_FunctionCANRx */
-/**
-* @brief Function implementing the TaskCANRx thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_FunctionCANRx */
-void FunctionCANRx(void const * argument)
-{
-  /* USER CODE BEGIN FunctionCANRx */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END FunctionCANRx */
-}
 
 /**
   * @brief  Period elapsed callback in non blocking mode
@@ -510,13 +526,24 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM1) {
+  if (htim->Instance == TIM1) 
+  {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-
+  if (htim->Instance == TIM2) 
+  {
+    canTransmit();
+  }
   /* USER CODE END Callback 1 */
 }
+
+
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{ 
+  canReceive();
+}
+
 
 /**
   * @brief  This function is executed in case of error occurrence.

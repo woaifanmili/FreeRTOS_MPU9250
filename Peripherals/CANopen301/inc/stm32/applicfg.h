@@ -85,7 +85,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 typedef void* CAN_HANDLE;
 
 typedef CAN_TypeDef* CAN_PORT;
-typedef void* TIM_PORT;
+typedef TIM_TypeDef* TIM_PORT;
 
 
 

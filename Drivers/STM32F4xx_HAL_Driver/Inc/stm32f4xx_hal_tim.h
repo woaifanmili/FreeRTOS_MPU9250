@@ -1155,7 +1155,7 @@ mode.
 #define __HAL_TIM_SET_AUTORELOAD(__HANDLE__, __AUTORELOAD__)                  \
                         do{                                                  \
                             (__HANDLE__)->Instance->ARR = (__AUTORELOAD__);  \
-                            (__HANDLE__)->Init.Period = (__AUTORELOAD__);    \
+                           /* (__HANDLE__)->Init.Period = (__AUTORELOAD__); */   \
                           } while(0U)
 /**
   * @brief  Gets the TIM Autoreload Register value on runtime.

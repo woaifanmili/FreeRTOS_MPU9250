@@ -5,45 +5,27 @@
 #include "canfestival.h"
 #include "HAL_CAN.h"
 
-unsigned char initCan(int can_port_num,unsigned int bitrate)
-{
-	if(1 == can_port_num)
-	{
-        CAN1_Config(bitrate);	
-	}
-	else if(2 == can_port_num)
-	{
-        CAN2_Config(bitrate);	
-	}
-
-	return 0;
-}
-
 
 // process the CAN1 Received msg
-//unsigned int count_receive=0;
-//int cobID_error = 0;
-void CAN1_RX0_IRQHandler(void)
+void canReceive(void)
 {
-    CAN_ITConfig(CAN1,CAN_IT_FMP0, DISABLE);//防止中断服务函数还没执行完又有数据传过来了
-
-	CanRxMsg RxMessage;
-	Message m;
-	int i;
-	CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
-	m.cob_id=RxMessage.StdId;
+  int i;
+  CAN_RxHeaderTypeDef RxMessageHeader; 
+	CAN_RxHeaderTypeDef *prx_msghead = &RxMessageHeader;
+  uint8_t Data[8];    
+  Message m;
+  
+  HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, prx_msghead, Data);
+  m.cob_id=RxMessageHeader.StdId;
     
-	if(RxMessage.RTR == CAN_RTR_REMOTE)
-		 m.rtr=1;
-	else if(RxMessage.RTR == CAN_RTR_DATA)
-		 m.rtr=0;
-		 m.len=RxMessage.DLC;
-	for(i = 0; i < RxMessage.DLC; i++)
-		 m.data[i]=RxMessage.Data[i];
-	canDispatch(&TestSlave_Data, &m);
-	
-    
-    CAN_ITConfig(CAN1,CAN_IT_FMP0, ENABLE); 
+  if(RxMessageHeader.RTR == CAN_RTR_REMOTE)
+     m.rtr=1;
+  else if(RxMessageHeader.RTR == CAN_RTR_DATA)
+     m.rtr=0;
+     m.len=RxMessageHeader.DLC;
+  for(i = 0; i < RxMessageHeader.DLC; i++)
+     m.data[i]=Data[i];
+  canDispatch(&TestSlave_Data, &m);
 }
 
 /***************************************************************************************/
@@ -53,31 +35,34 @@ int slave_send_faild = 0;
 unsigned char canSend(CO_Data* d, Message *m)
 {
 	uint32_t  i;
-    
-	CanTxMsg TxMessage;
-	CanTxMsg *ptx_msg=&TxMessage;
-	ptx_msg->StdId = m->cob_id;
+  uint32_t  TxMailbox;
+  
+  CAN_TxHeaderTypeDef TxMessageHeader; 
+	CAN_TxHeaderTypeDef *ptx_msghead=&TxMessageHeader;
+  uint8_t Data[8];
+  
+	ptx_msghead->StdId = m->cob_id;
     
     d->send_num=1;
 
 		if(m->rtr)
 		{	 
-			ptx_msg->RTR = CAN_RTR_REMOTE;
+			ptx_msghead->RTR = CAN_RTR_REMOTE;
 		}
 		else
 		{
-			 ptx_msg->RTR = CAN_RTR_DATA;
+			 ptx_msghead->RTR = CAN_RTR_DATA;
 		}
 		
-		ptx_msg->IDE = CAN_ID_STD;
-		ptx_msg->DLC = m->len;
+		ptx_msghead->IDE = CAN_ID_STD;
+		ptx_msghead->DLC = m->len;
 		
 		for(i = 0; i < m->len; i++)
 		{
-			 ptx_msg->Data[i] = m->data[i];
+			 Data[i] = m->data[i];
 		}
 		
-    if( CAN_Transmit( d->canHandle, ptx_msg )==CAN_NO_MB ) /* 如果没有空闲的发送邮箱可以使用，则返回0xff,发送成功则返回0x00 */
+    if( HAL_CAN_AddTxMessage(&hcan1, ptx_msghead, Data,&TxMailbox)==HAL_ERROR ) /* 如果没有空闲的发送邮箱可以使用，则返回0xff,发送成功则返回0x00 */
     {
 		if(d->can_port_num == 1)
 		{

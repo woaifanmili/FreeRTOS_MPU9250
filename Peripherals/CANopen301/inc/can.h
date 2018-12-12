@@ -29,6 +29,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * @brief The CAN message structure 
  * @ingroup can
  */
+extern CAN_HandleTypeDef hcan1;
+ 
 typedef struct {
   UNS16 cob_id;	/**< message's ID */
   UNS8 rtr;		/**< remote transmission request. (0 if not rtr message, 1 if rtr message) */
@@ -37,11 +39,10 @@ typedef struct {
 } Message;
 
 #define Message_Initializer {0,0,0,{0,0,0,0,0,0,0,0}}
-int CAN1_Config(unsigned int bitrate);
-int CAN2_Config(unsigned int bitrate);
-//unsigned char initCan(CAN_TypeDef* CANx,unsigned int bitrate);
-unsigned char initCan(int can_port_num,unsigned int bitrate);
+
 typedef UNS8 (*canSend_t)(Message *);
+
+void canReceive(void);
 
 #define CANn   1
 

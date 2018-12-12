@@ -1,5 +1,5 @@
 imu_v2.0\mpu6500.o: ..\Peripherals\HARDWARE\src\mpu6500.c
-imu_v2.0\mpu6500.o: ..\Peripherals\HARDWARE\inc\mpu6500.h
+imu_v2.0\mpu6500.o: ..\Peripherals\HARDWARE\inc\mpu9250.h
 imu_v2.0\mpu6500.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h
 imu_v2.0\mpu6500.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f405xx.h
 imu_v2.0\mpu6500.o: ../Drivers/CMSIS/Include/core_cm4.h

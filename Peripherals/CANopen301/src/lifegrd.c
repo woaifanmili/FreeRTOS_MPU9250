@@ -121,7 +121,7 @@ void ProducerHeartbeatAlarm(CO_Data* d, UNS32 id)
 	else 
 	{
 		d->ProducerHeartBeatTimer = DelAlarm(d->ProducerHeartBeatTimer, &ProducerHeartbeatAlarm, d);
-        CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+        __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
 	}
 }
 
@@ -219,9 +219,9 @@ void proceedNODE_GUARD(CO_Data* d, Message* m )
                 /* Renew alarm for next heartbeat. */
 				/* 如果收到心跳包，就对该节点重新进行掉线计时 */
                 DelAlarm(d->ConsumerHeartBeatTimers[index], &ConsumerHeartbeatAlarm, d);
-                CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+                __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
                 d->ConsumerHeartBeatTimers[index] = SetAlarm(d, index, &ConsumerHeartbeatAlarm, MS_TO_TIMEVAL(time), 0);
-                CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+                __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
               }
           }
       }
@@ -295,7 +295,7 @@ void GuardTimeAlarm(CO_Data* d, UNS32 id)
   else
   {
 	d->GuardTimeTimer = DelAlarm(d->GuardTimeTimer, &GuardTimeAlarm, d);
-    CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+    __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
   }
 }
 
@@ -355,7 +355,7 @@ void heartbeatInit(CO_Data* d)
       if ( time )
         {
           d->ConsumerHeartBeatTimers[index] = SetAlarm(d, index, &ConsumerHeartbeatAlarm, MS_TO_TIMEVAL(time), 0);
-          CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+          __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
         }
     }
   /* 生产者心跳时间不为0，设置生产者心跳定时器回调函数 */
@@ -363,7 +363,7 @@ void heartbeatInit(CO_Data* d)
     {
       TIMEVAL time = *d->ProducerHeartBeatTime;/* 对象0x1017 生产者心跳超时 */
       d->ProducerHeartBeatTimer = SetAlarm(d, 0, &ProducerHeartbeatAlarm, MS_TO_TIMEVAL(time), MS_TO_TIMEVAL(time));
-      CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+      __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
     }
 }
  /* 这玩意儿，只要在主站中实现就可以了，从站是被动接收和发送的。
@@ -382,7 +382,7 @@ void nodeguardInit(CO_Data* d)
     /* 设置主站询问从站状态定时器事件 */
     TIMEVAL time = *d->GuardTime;
     d->GuardTimeTimer = SetAlarm(d, 0, &GuardTimeAlarm, MS_TO_TIMEVAL(time), MS_TO_TIMEVAL(time));/*  */
-    CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+    __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
     MSG_WAR(0x0, "GuardTime: ", time);
     /* 为从节点初始化寿命值 */
     for (i = 0; i < NMT_MAX_NODE_ID; i++) 
@@ -420,16 +420,16 @@ void heartbeatStop(CO_Data* d)
   for( index = (UNS8)0x00; index < *d->ConsumerHeartbeatCount; index++ )
     {
       d->ConsumerHeartBeatTimers[index] = DelAlarm(d->ConsumerHeartBeatTimers[index], &ConsumerHeartbeatAlarm, d);
-      CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+      __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
     }
   d->ProducerHeartBeatTimer = DelAlarm(d->ProducerHeartBeatTimer, &ProducerHeartbeatAlarm, d);
-  CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+  __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
 }
 /* 删除节点保护定时事件 */
 void nodeguardStop(CO_Data* d)
 {
   d->GuardTimeTimer = DelAlarm(d->GuardTimeTimer, &GuardTimeAlarm, d);
-  CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+  __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
 }
 
  /* 同时停止心跳和节点保护 */

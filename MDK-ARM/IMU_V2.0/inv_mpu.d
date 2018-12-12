@@ -36,6 +36,6 @@ imu_v2.0\inv_mpu.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h
 imu_v2.0\inv_mpu.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h
 imu_v2.0\inv_mpu.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
 imu_v2.0\inv_mpu.o: ..\Peripherals\eMPL\inv_mpu_dmp_motion_driver.h
-imu_v2.0\inv_mpu.o: ..\Peripherals\HARDWARE\inc\mpu6500.h
+imu_v2.0\inv_mpu.o: ..\Peripherals\HARDWARE\inc\mpu9250.h
 imu_v2.0\inv_mpu.o: ..\Peripherals\HARDWARE\inc\iic.h
 imu_v2.0\inv_mpu.o: ..\Peripherals\sys\sys.h

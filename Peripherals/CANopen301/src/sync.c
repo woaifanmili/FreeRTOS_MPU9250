@@ -104,7 +104,7 @@ void startSYNC(CO_Data* d)
                                               所有节点的同步，当然可以看做同步生产者也接收到了一个同步帧		*/
 								US_TO_TIMEVAL(*d->Sync_Cycle_Period), /* 通信循环周期，对象0x1006 */
 								US_TO_TIMEVAL(*d->Sync_Cycle_Period));/* 通信循环周期，对象0x1006 */
-        CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+        __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
 	}
 }
 
@@ -121,7 +121,7 @@ void stopSYNC(CO_Data* d)
     RegisterSetODentryCallBack(d, 0x10060000, NULL);
 	/* 删除周期发送同步报文的定时器事件 */
 	d->syncTimer = DelAlarm(d->syncTimer, &SyncAlarm, d);
-    CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+    __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
 }
 
 

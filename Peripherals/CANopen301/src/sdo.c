@@ -37,6 +37,8 @@
 #include "canfestival.h"
 #include "sysdep.h"
 #include "ObjectDictionary.h"
+
+#include "stm32f4xx_hal_tim.h"
 /* Uncomment if your compiler does not support inline functions */
 #define NO_INLINE
 
@@ -145,7 +147,7 @@ void SDOTimeoutAlarm(CO_Data* d, UNS32 id)
 	UNS8 nodeId;
 	UNS32 errorCode;
  
-    TIM_ClearITPendingBit(d->can_timer_handle, TIM_IT_Update);
+    __HAL_TIM_CLEAR_IT(d, TIM_IT_UPDATE);
 	
 	/* Get the client->server cobid.*/
     if((d->transfers[id].whoami) == SDO_CLIENT)
@@ -207,12 +209,12 @@ void SDOTimeoutAlarm(CO_Data* d, UNS32 id)
 #define StopSDO_TIMER(id) \
 	MSG_WAR(0x3A05, "StopSDO_TIMER for line : ", line);\
 d->transfers[id].timer = DelAlarm(d->transfers[id].timer, &SDOTimeoutAlarm, d);\
-CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);
+__HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);
 
 #define StartSDO_TIMER(id) \
 	MSG_WAR(0x3A06, "StartSDO_TIMER for line : ", line);\
 d->transfers[id].timer = SetAlarm(d,id,&SDOTimeoutAlarm,MS_TO_TIMEVAL(SDO_TIMEOUT_MS),0);\
-CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);
+__HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);
 
 #define RestartSDO_TIMER(id) \
 	MSG_WAR(0x3A07, "restartSDO_TIMER for line : ", line);\
@@ -1780,7 +1782,7 @@ UNS8 proceedSDO (CO_Data* d, Message *m)
 							sendSDO(d, whoami, CliServNbr, data);
 			                // 避免邮箱占满，阻塞发送，实现方式不好，当PDO数量大的时候程序会等到所有PDO都从硬件发送完成后才能结束while执行后面的指令。后续修改为队列缓冲。
 			                // 当CAN总线故障时会造成程序堵塞在中断服务程序中，造成主程序和比该中断服务程序优先级低的程序卡死。							
-							while(!((d->canHandle->TSR & 0x10000000)|(d->canHandle->TSR & 0x08000000)|(d->canHandle->TSR & 0x04000000)))
+							while(!((d->CANInstance->TSR & 0x10000000)|(d->CANInstance->TSR & 0x08000000)|(d->CANInstance->TSR & 0x04000000)))
 							{
 							};/* 发送邮箱只有3个，不能塞太快 */
 						}
@@ -1867,7 +1869,7 @@ UNS8 proceedSDO (CO_Data* d, Message *m)
 					        sendSDO(d, whoami, CliServNbr, data);
 			                // 避免邮箱占满，阻塞发送，实现方式不好，当PDO数量大的时候程序会等到所有PDO都从硬件发送完成后才能结束while执行后面的指令。后续修改为队列缓冲。
 			                // 当CAN总线故障时会造成程序堵塞在中断服务程序中，造成主程序和比该中断服务程序优先级低的程序卡死。							
-							while(!((d->canHandle->TSR & 0x10000000)|(d->canHandle->TSR & 0x08000000)|(d->canHandle->TSR & 0x04000000)))
+							while(!((d->CANInstance->TSR & 0x10000000)|(d->CANInstance->TSR & 0x08000000)|(d->CANInstance->TSR & 0x04000000)))
 							{
 							};/* 发送邮箱只有3个，不能塞太快 */				        }
 				        else 
@@ -2372,7 +2374,7 @@ INLINE UNS8 _writeNetworkDict (CO_Data* d, UNS8 nodeId, UNS16 index, UNS8 subInd
 	err = sendSDO(d, SDO_CLIENT, CliNbr, buf);
 	
 	//debug_test
-	while(!((d->canHandle->TSR & 0x10000000)|(d->canHandle->TSR & 0x08000000)|(d->canHandle->TSR & 0x04000000)))
+	while(!((d->CANInstance->TSR & 0x10000000)|(d->CANInstance->TSR & 0x08000000)|(d->CANInstance->TSR & 0x04000000)))
 	{
 	};/* 发送邮箱只有3个，不能塞太快 */
 

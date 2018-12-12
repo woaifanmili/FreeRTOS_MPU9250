@@ -224,7 +224,7 @@ typedef struct
   */
 typedef struct __CAN_HandleTypeDef
 {
-  CAN_TypeDef                 *Instance;                 /*!< Register base address */
+  CAN_TypeDef                 *CANInstance;                 /*!< Register base address */
 
   CAN_InitTypeDef             Init;                      /*!< CAN required parameters */
 
@@ -505,7 +505,7 @@ typedef struct __CAN_HandleTypeDef
   *           This parameter can be any combination of @arg CAN_Interrupts
   * @retval None
   */
-#define __HAL_CAN_ENABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->IER) |= (__INTERRUPT__))
+#define __HAL_CAN_ENABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->CANInstance->IER) |= (__INTERRUPT__))
 
 /**
   * @brief  Disable the specified CAN interrupts.
@@ -514,7 +514,7 @@ typedef struct __CAN_HandleTypeDef
   *           This parameter can be any combination of @arg CAN_Interrupts
   * @retval None
   */
-#define __HAL_CAN_DISABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->IER) &= ~(__INTERRUPT__))
+#define __HAL_CAN_DISABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->CANInstance->IER) &= ~(__INTERRUPT__))
 
 /** @brief  Check if the specified CAN interrupt source is enabled or disabled.
   * @param  __HANDLE__ specifies the CAN Handle.
@@ -562,10 +562,10 @@ typedef struct __CAN_HandleTypeDef
   * @retval None
   */
 #define __HAL_CAN_CLEAR_FLAG(__HANDLE__, __FLAG__) \
-  ((((__FLAG__) >> 8U) == 5U)? (((__HANDLE__)->Instance->TSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
-   (((__FLAG__) >> 8U) == 2U)? (((__HANDLE__)->Instance->RF0R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
-   (((__FLAG__) >> 8U) == 4U)? (((__HANDLE__)->Instance->RF1R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
-   (((__FLAG__) >> 8U) == 1U)? (((__HANDLE__)->Instance->MSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): 0U)
+  ((((__FLAG__) >> 8U) == 5U)? (((__HANDLE__)->CANInstance->TSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
+   (((__FLAG__) >> 8U) == 2U)? (((__HANDLE__)->CANInstance->RF0R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
+   (((__FLAG__) >> 8U) == 4U)? (((__HANDLE__)->CANInstance->RF1R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
+   (((__FLAG__) >> 8U) == 1U)? (((__HANDLE__)->CANInstance->MSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): 0U)
 
 /**
  * @}

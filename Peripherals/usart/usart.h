@@ -5,7 +5,7 @@
 #include "stm32f4xx_hal_conf.h"
 
 #include "delay.h"
-#include "mpu6500.h"
+#include "mpu9250.h"
 
 extern UART_HandleTypeDef huart1;
 

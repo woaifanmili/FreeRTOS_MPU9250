@@ -3,7 +3,9 @@
 
 #include "stm32f4xx.h"
 
-#define TIM_CANOPEN_SLAVE     TIM2
+extern TIM_HandleTypeDef htim2;
+
+#define TIM_CANOPEN_SLAVE     htim2
 #define TIM_CANOPEN_MASTER    TIM4
 
 #define TIM_CANopenSlaveIRQHandler   TIM2_IRQHandler

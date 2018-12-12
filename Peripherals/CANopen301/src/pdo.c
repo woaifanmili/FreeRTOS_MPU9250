@@ -335,10 +335,10 @@ UNS8 proceedPDO (CO_Data * d, Message * m)
 					{
 						/* 删除定时器 */
                         DelAlarm (d->RxPDO_EventTimers[numPdo], d->RxPDO_EventTimers_Handler, d);
-                        CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+                        __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
 						/* 设定定时器 */
                         d->RxPDO_EventTimers[numPdo] = SetAlarm (d, numPdo, d->RxPDO_EventTimers_Handler/* 空函数 */, MS_TO_TIMEVAL (EventTimerDuration), 0);
-                        CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+                        __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
                     }
                 }
                 return 0;
@@ -423,10 +423,10 @@ UNS8 proceedPDO (CO_Data * d, Message * m)
                     /* Zap all timers and inhibit flag */
 					/* 删除事件定时器 */
                     d->PDO_status[numPdo].event_timer = DelAlarm (d->PDO_status[numPdo].event_timer, &PDOEventTimerAlarm, d);
-                    CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+                    __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
 					/* 删除禁止定时器 */					  
                     d->PDO_status[numPdo].inhibit_timer = DelAlarm(d->PDO_status[numPdo].inhibit_timer, &PDOInhibitTimerAlarm, d);
-                    CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+                    __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
                     d->PDO_status[numPdo].transmit_type_parameter &= ~PDO_INHIBITED;
                     /* Call  PDOEventTimerAlarm for this TPDO, 
                      * this will trigger emission et reset timers */
@@ -453,7 +453,7 @@ UNS8 proceedPDO (CO_Data * d, Message * m)
                   canSend (d, &pdo);
 			      // 避免邮箱占满，阻塞发送，实现方式不好，当PDO数量大的时候程序会等到所有PDO都从硬件发送完成后才能结束while执行后面的指令。后续修改为队列缓冲。
 			      // 当CAN总线故障时会造成程序堵塞在中断服务程序中，造成主程序和比该中断服务程序优先级低的程序卡死。							
-                  while(!((d->canHandle->TSR & 0x10000000)|(d->canHandle->TSR & 0x08000000)|(d->canHandle->TSR & 0x04000000)))
+                  while(!((d->CANInstance->TSR & 0x10000000)|(d->CANInstance->TSR & 0x08000000)|(d->CANInstance->TSR & 0x04000000)))
                   {
 				  };/* 发送邮箱只有3个，不能塞太快 */					
 					
@@ -635,17 +635,17 @@ UNS8 sendOnePDOevent (CO_Data * d, UNS8 pdoNum)
       if (EventTimerDuration)
         {
           DelAlarm (d->PDO_status[pdoNum].event_timer, &PDOEventTimerAlarm, d);
-          CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+          __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
           d->PDO_status[pdoNum].event_timer = SetAlarm (d, pdoNum, &PDOEventTimerAlarm, MS_TO_TIMEVAL(EventTimerDuration), 0);
-          CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+          __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
         }
       /* 启动抑制定时器 */
       if (InhibitTimerDuration)
         {
           DelAlarm(d->PDO_status[pdoNum].inhibit_timer, &PDOInhibitTimerAlarm, d);
-          CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+          __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
           d->PDO_status[pdoNum].inhibit_timer = SetAlarm(d, pdoNum, &PDOInhibitTimerAlarm, US_TO_TIMEVAL(InhibitTimerDuration*100), 0);
-          CAN_ITConfig(d->canHandle,CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+          __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
           /* and inhibit TPDO */
           d->PDO_status[pdoNum].transmit_type_parameter |= PDO_INHIBITED;
         }
@@ -817,7 +817,7 @@ UNS8 _sendPDOevent (CO_Data * d, UNS8 isSyncEvent)
 //			    if(1 == d->can_port_num)
 //				{	
 ////#endif					
-//			        while(!((d->canHandle->TSR & 0x10000000)|(d->canHandle->TSR & 0x08000000)|(d->canHandle->TSR & 0x04000000)))
+//			        while(!((d->Instance->TSR & 0x10000000)|(d->Instance->TSR & 0x08000000)|(d->Instance->TSR & 0x04000000)))
 //			        {
 //			        };/* 发送邮箱只有3个，不能塞太快 */
 //					
@@ -877,10 +877,10 @@ UNS32 TPDO_Communication_Parameter_Callback (CO_Data * d,
           /* Zap all timers and inhibit flag */
 	      /* 删除事件定时器 */
           d->PDO_status[numPdo].event_timer = DelAlarm(d->PDO_status[numPdo].event_timer, &PDOEventTimerAlarm, d);
-          CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+          __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
 		  /* 删除禁止定时器 */
           d->PDO_status[numPdo].inhibit_timer = DelAlarm(d->PDO_status[numPdo].inhibit_timer, &PDOInhibitTimerAlarm, d);
-          CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+          __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
 		  /* 发送类型 */
           d->PDO_status[numPdo].transmit_type_parameter = 0;
           /* Call  PDOEventTimerAlarm for this TPDO, this will trigger emission et reset timers */
@@ -964,9 +964,9 @@ void PDOStop (CO_Data * d)
         /* Delete TPDO timers */
 		/* 删除PDO定时器 */
         d->PDO_status[pdoNum].event_timer = DelAlarm(d->PDO_status[pdoNum].event_timer, &PDOEventTimerAlarm, d);
-        CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+        __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
         d->PDO_status[pdoNum].inhibit_timer = DelAlarm(d->PDO_status[pdoNum].inhibit_timer, &PDOInhibitTimerAlarm, d);
-        CAN_ITConfig(d->canHandle, CAN_IT_FMP0, ENABLE);//该函数现在可允许被中断打断
+        __HAL_CAN_ENABLE_IT(d, CAN_IT_RX_FIFO0_MSG_PENDING);//该函数现在可允许被中断打断
         /* Reset transmit type parameter */
 		/* 重置参数 */
         d->PDO_status[pdoNum].transmit_type_parameter = 0;
