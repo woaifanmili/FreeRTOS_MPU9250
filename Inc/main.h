@@ -58,6 +58,18 @@
 /* USER CODE END Includes */
 
 /* Private define ------------------------------------------------------------*/
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+void Freertos_Init(void);
+static void GPIO_Init(void);
+static void CAN1_Init(void);
+static void MX_TIM2_Init(void);
+static void USART1_Init(void);
+void FunctionIMUdata(void const * argument);
+void FunctionUSARTTx(void const * argument);
+void FunctionCANopenUpdate(void const * argument);
+void FunctionCANRx(void const * argument);
+void FunctionTimeDispatch(void const * argument);
 
 /* ########################## Assert Selection ############################## */
 /**

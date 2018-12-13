@@ -303,7 +303,7 @@ void TimeDispatch(CO_Data* d)
 }
 
 //// IRQ: CANopen_slave_node
-void canTransmit(void)
+void CANopen_slave_node(void)
 {
 		TestSlave_Data.last_time_set = __HAL_TIM_GET_COUNTER(&TIM_CANOPEN_SLAVE);
 

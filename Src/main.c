@@ -46,28 +46,6 @@
   *
   ******************************************************************************
   */
-  /*重大修改：为满足CANopen同时使用CAN和TIM中断标志清零
-  	一、struct struct_CO_Data定义中
-    CACAN_PORT CANInstance;  原canHandle
-    TIM_PORT Instance;    原can_timer_handle
-    二、修改HAL库中的宏定义：
-        1.#define __HAL_CAN_DISABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->CANInstance->IER) &= ~(__INTERRUPT__))
-        原为：#define __HAL_CAN_DISABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->IER) &= ~(__INTERRUPT__))
-        2.#define __HAL_CAN_ENABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->CANInstance->IER) |= (__INTERRUPT__))
-        原为：#define __HAL_CAN_ENABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->IER) |= (__INTERRUPT__))
-        3.#define __HAL_CAN_CLEAR_FLAG(__HANDLE__, __FLAG__) \
-  ((((__FLAG__) >> 8U) == 5U)? (((__HANDLE__)->CANInstance->TSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
-   (((__FLAG__) >> 8U) == 2U)? (((__HANDLE__)->CANInstance->RF0R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
-   (((__FLAG__) >> 8U) == 4U)? (((__HANDLE__)->CANInstance->RF1R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
-   (((__FLAG__) >> 8U) == 1U)? (((__HANDLE__)->CANInstance->MSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): 0U)
-        原为：#define __HAL_CAN_CLEAR_FLAG(__HANDLE__, __FLAG__) \
-  ((((__FLAG__) >> 8U) == 5U)? (((__HANDLE__)->Instance->TSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
-   (((__FLAG__) >> 8U) == 2U)? (((__HANDLE__)->Instance->RF0R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
-   (((__FLAG__) >> 8U) == 4U)? (((__HANDLE__)->Instance->RF1R) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): \
-   (((__FLAG__) >> 8U) == 1U)? (((__HANDLE__)->Instance->MSR) = (1U << ((__FLAG__) & CAN_FLAG_MASK))): 0U)
-    三、其他用到canHandle和can_timer_handle的地方
-    */
-  
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_hal.h"
@@ -90,147 +68,54 @@
 
 /* Private variables ---------------------------------------------------------*/
 CAN_HandleTypeDef hcan1;
-
 TIM_HandleTypeDef htim2;
-
 UART_HandleTypeDef huart1;
-
 osThreadId TaskIMUdataHandle;
 osThreadId TaskUSARTTxHandle;
 osThreadId TaskCANopenUpdateHandle;
+osThreadId TaskCANRxHandle;
+osThreadId TaskTimeDispatchHandle;
 osMessageQId QueueUSARTTxHandle;
 osMessageQId QueueCANopenUpdateHandle;
+osMessageQId QueueCANRxHandle;
+osSemaphoreId SemphoreTimeDispatchHandle;
 
-/* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 extern int32_t EULER[];
-/* USER CODE END PV */
 
-/* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_CAN1_Init(void);
-static void MX_TIM2_Init(void);
-static void MX_USART1_UART_Init(void);
-void FunctionIMUdata(void const * argument);
-void FunctionUSARTTx(void const * argument);
-void FunctionCANopenUpdate(void const * argument);
-
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
-
-/* USER CODE END PFP */
-
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
-
-/**
-  * @brief  The application entry point.
-  *
-  * @retval None
-  */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
   /* MCU Configuration----------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
   /* Configure the system clock */
   SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
+  
+  /* Configure the delay clock */
   delay_init(168);
   delay_ms(500);
-  /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_CAN1_Init();
-  MX_TIM2_Init();
-  MX_USART1_UART_Init();
-  /* USER CODE BEGIN 2 */
+  GPIO_Init();
+  CAN1_Init();
+  USART1_Init();
+  
+  /* Initialize CANopen and MPU9250 DMP */
   CanopenInit();
   mpu_dmp_init();
-  /* USER CODE END 2 */
 
-  /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
-
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
-
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
-
-  /* Create the thread(s) */
-  /* definition and creation of TaskIMUdata */
-  osThreadDef(TaskIMUdata, FunctionIMUdata, osPriorityBelowNormal, 0, 128);
-  TaskIMUdataHandle = osThreadCreate(osThread(TaskIMUdata), NULL);
-
-  /* definition and creation of TaskUSARTTx */
-  osThreadDef(TaskUSARTTx, FunctionUSARTTx, osPriorityLow, 0, 128);
-  TaskUSARTTxHandle = osThreadCreate(osThread(TaskUSARTTx), NULL);
-
-  /* definition and creation of TaskCANTx */
-  osThreadDef(TaskCANopenUpdate, FunctionCANopenUpdate, osPriorityLow, 0, 128);
-  TaskCANopenUpdateHandle = osThreadCreate(osThread(TaskCANopenUpdate), &EULER);
-
-  /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  /* USER CODE END RTOS_THREADS */
-
-  /* Create the queue(s) */
-  /* definition and creation of QueueUSARTTx */
-/* what about the sizeof here??? cd native code */
-  osMessageQDef(QueueUSARTTx, 16, IMUData_t);
-  QueueUSARTTxHandle = osMessageCreate(osMessageQ(QueueUSARTTx), NULL);
-
-  /* definition and creation of QueueCANTx */
-/* what about the sizeof here??? cd native code */
-  osMessageQDef(QueueCANopenUpdate, 16, IMUData_t);
-  QueueCANopenUpdateHandle = osMessageCreate(osMessageQ(QueueCANopenUpdate), NULL);
-
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
+  /* Initialize FreeRTOS Thread, semphores, queue  */
+  Freertos_Init();
  
-
   /* Start scheduler */
   osKernelStart();
-  
-  /* We should never get here as control is now taken by the scheduler */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
-  {
-
-  /* USER CODE END WHILE */
-
-  /* USER CODE BEGIN 3 */
-
-  }
-  /* USER CODE END 3 */
-
+  {}
 }
 
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
 void SystemClock_Config(void)
 {
 
@@ -284,8 +169,50 @@ void SystemClock_Config(void)
   HAL_NVIC_SetPriority(SysTick_IRQn, 15, 0);
 }
 
+void Freertos_Init(void)
+{
+  
+  /* Create the rtos_semaphores*/
+  osSemaphoreDef(SemphoreTimeDispatch);
+  SemphoreTimeDispatchHandle = osSemaphoreCreate(osSemaphore(SemphoreTimeDispatch),1);
+  
+  /* Create the thread(s) */
+  /* definition and creation of TaskIMUdata */
+  osThreadDef(TaskIMUdata, FunctionIMUdata, osPriorityLow, 0, 128);
+  TaskIMUdataHandle = osThreadCreate(osThread(TaskIMUdata), NULL);
+
+  /* definition and creation of TaskUSARTTx */
+  osThreadDef(TaskUSARTTx, FunctionUSARTTx, osPriorityBelowNormal, 0, 128);
+  TaskUSARTTxHandle = osThreadCreate(osThread(TaskUSARTTx), NULL);
+
+  /* definition and creation of TaskCANTx */
+  osThreadDef(TaskCANopenUpdate, FunctionCANopenUpdate, osPriorityBelowNormal, 0, 128);
+  TaskCANopenUpdateHandle = osThreadCreate(osThread(TaskCANopenUpdate), &EULER);
+
+  /* definition and creation of TaskCANRx */
+  osThreadDef(TaskCANRx, FunctionCANRx, osPriorityNormal, 0, 128);
+  TaskCANRxHandle = osThreadCreate(osThread(TaskCANRx), NULL);
+
+  /* definition and creation of TaskTimeDispatch */
+  osThreadDef(TaskTimeDispatch, FunctionTimeDispatch, osPriorityNormal, 0, 128);
+  TaskTimeDispatchHandle = osThreadCreate(osThread(TaskTimeDispatch), NULL);
+  
+  /* Create the queue(s) */
+  /* definition and creation of QueueUSARTTx */
+  osMessageQDef(QueueUSARTTx, 16, IMUData_t);
+  QueueUSARTTxHandle = osMessageCreate(osMessageQ(QueueUSARTTx), NULL);
+
+  /* definition and creation of QueueCANopenUpdate */
+  osMessageQDef(QueueCANopenUpdate, 16, IMUData_t);
+  QueueCANopenUpdateHandle = osMessageCreate(osMessageQ(QueueCANopenUpdate), NULL);
+  
+  /* definition and creation of QueueCANRx */
+  osMessageQDef(QueueCANRx, 16, Message);
+  QueueCANRxHandle = osMessageCreate(osMessageQ(QueueCANRx), NULL);
+}
+
 /* CAN1 init function */
-static void MX_CAN1_Init(void)
+static void CAN1_Init(void)
 {
 
   hcan1.CANInstance = CAN1;
@@ -357,7 +284,7 @@ static void MX_TIM2_Init(void)
 }
 
 /* USART1 init function */
-static void MX_USART1_UART_Init(void)
+static void USART1_Init(void)
 {
 
   huart1.Instance = USART1;
@@ -375,14 +302,8 @@ static void MX_USART1_UART_Init(void)
 
 }
 
-/** Configure pins as 
-        * Analog 
-        * Input 
-        * Output
-        * EVENT_OUT
-        * EXTI
-*/
-static void MX_GPIO_Init(void)
+/** GPIO init function */
+static void GPIO_Init(void)
 {
 
   GPIO_InitTypeDef GPIO_InitStruct;
@@ -414,64 +335,41 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
-
-/* USER CODE BEGIN Header_FunctionIMUdata */
-/**
-  * @brief  Function implementing the TaskIMUdata thread.
-  * @param  argument: Not used 
-  * @retval None
-  */
-/* USER CODE END Header_FunctionIMUdata */
 void FunctionIMUdata(void const * argument)
 {
-
-  /* USER CODE BEGIN 5 */
   int16_t sLightcnt = 0;
-  /* Infinite loop */
+
   for(;;)
   {
     IMUData_t IMU;  
-    
+    taskENTER_CRITICAL();
     if(mpu_dmp_get_data(&IMU.Euler.pitch,&IMU.Euler.roll,&IMU.Euler.yaw) == 0)     //角度顺序有问题，尚不清楚原因，可能是芯片方向。约75ms可以采样到一次 
     {      
-      /*采样温度和陀螺仪加速度计原始数据*/
-      IMU.temp=MPU_Get_Temperature();	//得到温度值    
-      MPU_Get_Gyroscope(&IMU.gyro.x, &IMU.gyro.y, &IMU.gyro.z);	//得到陀螺仪数据
-      MPU_Get_Accelerometer(&IMU.acc.x, &IMU.acc.y, &IMU.acc.z);	//得到加速度传感器数据
-      /*发送数据至串口队列*/
+      /*sample raw data of temp,acc and gyro*/
+      IMU.temp=MPU_Get_Temperature();	
+      MPU_Get_Gyroscope(&IMU.gyro.x, &IMU.gyro.y, &IMU.gyro.z);	
+      MPU_Get_Accelerometer(&IMU.acc.x, &IMU.acc.y, &IMU.acc.z);
+      /*send data to usart queue*/
       xQueueSend(QueueUSARTTxHandle, &IMU, 10);
       xQueueSend(QueueCANopenUpdateHandle, &IMU, 10);       
-      /*LED1 闪烁表示采样中*/
+      /*LED1 presents sample data working*/
       if(!(sLightcnt %= 10))
         HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_14);
       sLightcnt++;        
-    }   
+    } 
+    taskEXIT_CRITICAL();    
     osDelay(1);
   }
-  /* USER CODE END 5 */ 
 }
-
-/* USER CODE BEGIN Header_FunctionUSARTTx */
-/**
-* @brief Function implementing the TaskUSARTTx thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_FunctionUSARTTx */
 void FunctionUSARTTx(void const * argument)
 {
-  /* USER CODE BEGIN FunctionUSARTTx */
   BaseType_t xStatus;
-  /* Infinite loop */
+
   for(;;)
   {
     IMUData_t IMU;  
     /*the task will remain in the Blocked state to wait for data to be available*/
-    xStatus=xQueueReceive(QueueUSARTTxHandle,&IMU,0);
+    xStatus=xQueueReceive(QueueUSARTTxHandle,&IMU,portMAX_DELAY);
 
     if(xStatus == pdPASS)
     {
@@ -480,27 +378,17 @@ void FunctionUSARTTx(void const * argument)
       usart1_report_imu(IMU.acc,IMU.gyro,(int)(-IMU.Euler.pitch*100),(int)(IMU.Euler.roll*100),(int)(IMU.Euler.yaw*10)); 
     }    
   }
-  /* USER CODE END FunctionUSARTTx */
 }
-
-/* USER CODE BEGIN Header_FunctionCANTx */
-/**
-* @brief Function implementing the TaskCANTx thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_FunctionCANTx */
 void FunctionCANopenUpdate(void const * argument)
 {
-  /* USER CODE BEGIN FunctionCANTx */
   BaseType_t xStatus;
   int32_t *euler = (int32_t *)argument;
-  /* Infinite loop */
+
   for(;;)
   {
     IMUData_t IMU; 
     /*the task will remain in the Blocked state to wait for data to be available*/
-    xStatus=xQueueReceive(QueueCANopenUpdateHandle,&IMU,0);
+    xStatus=xQueueReceive(QueueCANopenUpdateHandle,&IMU,portMAX_DELAY);
     
     if(xStatus == pdPASS)
     {
@@ -509,72 +397,93 @@ void FunctionCANopenUpdate(void const * argument)
       euler[2] = (int32_t)(IMU.Euler.yaw*100);
     }      
   }
-  /* USER CODE END FunctionCANTx */
+}
+void FunctionCANRx(void const * argument)
+{
+  BaseType_t xStatus;
+
+  for(;;)
+  {
+    Message m;  
+    /*the task will remain in the Blocked state to wait for data to be available*/
+    xStatus=xQueueReceive(QueueCANRxHandle, &m, portMAX_DELAY);
+
+    if(xStatus == pdPASS)
+    {
+      /* Data was successfully received from the queue*/
+      canDispatch(&TestSlave_Data, &m);
+    }  
+  }
+}
+void FunctionTimeDispatch(void const * argument)
+{
+  MX_TIM2_Init();
+  BaseType_t xStatus;
+
+  for(;;)
+  {
+    /*the task will remain in the Blocked state to wait for data to be available*/
+    xStatus = xSemaphoreTake(SemphoreTimeDispatchHandle, portMAX_DELAY);
+
+    if(xStatus == pdPASS)
+    {    
+      CANopen_slave_node();
+    }
+  }
 }
 
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM1 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  /* USER CODE BEGIN Callback 0 */
 
-  /* USER CODE END Callback 0 */
   if (htim->Instance == TIM1) 
   {
     HAL_IncTick();
   }
-  /* USER CODE BEGIN Callback 1 */
   if (htim->Instance == TIM2) 
   {
-    canTransmit();
-  }
-  /* USER CODE END Callback 1 */
-}
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
+    xSemaphoreGiveFromISR(SemphoreTimeDispatchHandle, &xHigherPriorityTaskWoken); 
+  }
+}
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 { 
-  canReceive();
+  /*Read CAN data and send to queue QueueCANRxHandle*/
+  int i;
+  CAN_RxHeaderTypeDef RxMessageHeader; 
+  UNS8 Data[8];    
+  Message m;
+  
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+  HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxMessageHeader, Data);
+  m.cob_id=RxMessageHeader.StdId;
+    
+  if(RxMessageHeader.RTR == CAN_RTR_REMOTE)
+     m.rtr=1;
+  else if(RxMessageHeader.RTR == CAN_RTR_DATA)
+     m.rtr=0;
+  m.len=RxMessageHeader.DLC;
+  for(i = 0; i < RxMessageHeader.DLC; i++)
+     m.data[i]=Data[i];
+  
+  xQueueSendFromISR(QueueCANRxHandle, &m, &xHigherPriorityTaskWoken);
 }
 
-
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @param  file: The file name as string.
-  * @param  line: The line in file as a number.
-  * @retval None
-  */
 void _Error_Handler(char *file, int line)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   while(1)
   {
   }
-  /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
 void assert_failed(uint8_t* file, uint32_t line)
 { 
-  /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
 
