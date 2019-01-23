@@ -82,6 +82,11 @@ osSemaphoreId SemphoreTimeDispatchHandle;
 
 /* Private variables ---------------------------------------------------------*/
 extern int32_t EULER[];
+#define J_SCOPE  1
+#ifdef J_SCOPE
+int32_t PITCH,ROLL,YAW;
+int32_t HEADING,MAGNET;
+#endif
 
 int main(void)
 {
@@ -100,6 +105,7 @@ int main(void)
   /* Initialize all configured peripherals */
   GPIO_Init();
   CAN1_Init();
+  delay_ms(50);
   USART1_Init();
   
   /* Initialize CANopen and MPU9250 DMP */
@@ -185,7 +191,7 @@ void Freertos_Init(void)
   osThreadDef(TaskUSARTTx, FunctionUSARTTx, osPriorityBelowNormal, 0, 128);
   TaskUSARTTxHandle = osThreadCreate(osThread(TaskUSARTTx), NULL);
 
-  /* definition and creation of TaskCANTx */
+  /* definition and creation of TaskCANopenUpdate */
   osThreadDef(TaskCANopenUpdate, FunctionCANopenUpdate, osPriorityBelowNormal, 0, 128);
   TaskCANopenUpdateHandle = osThreadCreate(osThread(TaskCANopenUpdate), &EULER);
 
@@ -338,25 +344,26 @@ static void GPIO_Init(void)
 void FunctionIMUdata(void const * argument)
 {
   int16_t sLightcnt = 0;
-
+  double heading;
   for(;;)
   {
     IMUData_t IMU;  
     taskENTER_CRITICAL();
     if(mpu_dmp_get_data(&IMU.Euler.pitch,&IMU.Euler.roll,&IMU.Euler.yaw) == 0)     //角度顺序有问题，尚不清楚原因，可能是芯片方向。约75ms可以采样到一次 
     {      
-      /*sample raw data of temp,acc and gyro*/
+      /*sampling raw data of temp,acc and gyro*/
       IMU.temp=MPU_Get_Temperature();	
       MPU_Get_Gyroscope(&IMU.gyro.x, &IMU.gyro.y, &IMU.gyro.z);	
       MPU_Get_Accelerometer(&IMU.acc.x, &IMU.acc.y, &IMU.acc.z);
-      /*send data to usart queue*/
+      MPU_Get_Heading(&IMU.mag.x, &IMU.mag.y, &IMU.mag.z, &heading);
+     /*send data to usart queue*/
       xQueueSend(QueueUSARTTxHandle, &IMU, 10);
       xQueueSend(QueueCANopenUpdateHandle, &IMU, 10);       
       /*LED1 presents sample data working*/
       if(!(sLightcnt %= 10))
         HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_14);
       sLightcnt++;        
-    } 
+    }    
     taskEXIT_CRITICAL();    
     osDelay(1);
   }
@@ -392,9 +399,14 @@ void FunctionCANopenUpdate(void const * argument)
     
     if(xStatus == pdPASS)
     {
-      euler[0] = (int32_t)(IMU.Euler.pitch*100);
-      euler[1] = (int32_t)(IMU.Euler.roll*100);
+      euler[1] = (int32_t)(-IMU.Euler.pitch*100);
+      euler[0] = (int32_t)(IMU.Euler.roll*100);
       euler[2] = (int32_t)(IMU.Euler.yaw*100);
+#ifdef J_SCOPE
+      PITCH = euler[0]; 
+      ROLL = euler[1];
+      YAW = euler[2];
+#endif      
     }      
   }
 }

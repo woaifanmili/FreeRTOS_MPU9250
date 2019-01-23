@@ -30,7 +30,9 @@
 //#include "usart.h"
 extern void delay_ms( uint32_t nCnt_1ms );
 
-#define MPU6500							//定义我们使用的传感器为MPU6500
+#define MPU9250							//定义我们使用的传感器为MPU6500
+#define AK8963_SECONDARY
+
 #define MOTION_DRIVER_TARGET_MSP430		//定义驱动部分,采用MSP430的驱动(移植到STM32F4)
 
 /* The following functions must be defined for this platform:
@@ -2225,11 +2227,11 @@ static int get_st_biases(long *gyro, long *accel, unsigned char hw_test)
         packet_count);
     accel[2] = (long)(((long long)accel[2]<<16) / test.accel_sens /
         packet_count);
-    /* Don't remove gravity! */
-    if (accel[1] > 0L)
-        accel[1] -= 65536L;
+    /* remove gravity from the accel Z */
+    if (accel[2] > 0L)
+        accel[2] -= 65536L;
     else
-        accel[1] += 65536L;
+        accel[2] += 65536L;
 #endif
 
     return 0;
@@ -3117,6 +3119,7 @@ int mpu_get_compass_reg(short *data, unsigned long *timestamp)
     if (tmp[7] & AKM_OVERFLOW)
         return -3;
 #endif
+    
     data[0] = (tmp[2] << 8) | tmp[1];
     data[1] = (tmp[4] << 8) | tmp[3];
     data[2] = (tmp[6] << 8) | tmp[5];
@@ -3430,11 +3433,11 @@ u8 run_self_test(void)
 		gyro[1] = (long)(gyro[1] * sens);
 		gyro[2] = (long)(gyro[2] * sens);
 		dmp_set_gyro_bias(gyro);
-		mpu_get_accel_sens(&accel_sens);
-		accel[0] *= accel_sens;
-		accel[1] *= accel_sens;
-		accel[2] *= accel_sens;
-		dmp_set_accel_bias(accel);
+//		mpu_get_accel_sens(&accel_sens);
+//		accel[0] *= accel_sens;
+//		accel[1] *= accel_sens;
+//		accel[2] *= accel_sens;
+//		dmp_set_accel_bias(accel);
 		return 0;
 	}else return 1;
 }
@@ -3483,7 +3486,7 @@ unsigned short inv_row_2_scale(const signed char *row)
 //空函数,未用到.
 void mget_ms(unsigned long *time)
 {
-
+  
 }
 //mpu6050,dmp初始化
 //返回值:0,正常
@@ -3494,7 +3497,7 @@ u8 mpu_dmp_init(void)
 	IIC_Init(); 		//初始化IIC总线
 	if(mpu_init()==0)	//初始化MPU6050
 	{	 
-		res=mpu_set_sensors(INV_XYZ_GYRO|INV_XYZ_ACCEL);//设置所需要的传感器
+		res=mpu_set_sensors(INV_XYZ_GYRO|INV_XYZ_ACCEL|INV_XYZ_COMPASS);//设置所需要的传感器
 		if(res)return 1; 
 		res=mpu_configure_fifo(INV_XYZ_GYRO | INV_XYZ_ACCEL);//设置FIFO
 		if(res)return 2; 
@@ -3502,18 +3505,18 @@ u8 mpu_dmp_init(void)
 		if(res)return 3; 
 		res=dmp_load_motion_driver_firmware();		//加载dmp固件
 		if(res)return 4; 
-		res=dmp_set_orientation(inv_orientation_matrix_to_scalar(gyro_orientation));//设置陀螺仪方向
-		if(res)return 5; 
+		res=dmp_set_orientation(inv_orientation_matrix_to_scalar(gyro_orientation));//设置陀螺仪方向		
+    if(res)return 5; 
 		res=dmp_enable_feature(DMP_FEATURE_6X_LP_QUAT|DMP_FEATURE_TAP|	//设置dmp功能
 		    DMP_FEATURE_ANDROID_ORIENT|DMP_FEATURE_SEND_RAW_ACCEL|DMP_FEATURE_SEND_CAL_GYRO|
 		    DMP_FEATURE_GYRO_CAL);
 		if(res)return 6; 
 		res=dmp_set_fifo_rate(DEFAULT_MPU_HZ);	//设置DMP输出速率(最大不超过200Hz)
 		if(res)return 7;   
-//		res=run_self_test();		//自检
-//		if(res)return 8;    
+		res=run_self_test();		//自检
+		if(res)return 8;    
 		res=mpu_set_dmp_state(1);	//使能DMP
-		if(res)return 9;     
+		if(res)return 9;  
 	}
 	return 0;
 }

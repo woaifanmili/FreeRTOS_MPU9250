@@ -2,7 +2,8 @@
 #include "sys.h"
 #include "delay.h"
 #include "iic.h"
-
+#include "inv_mpu.h"
+#include "math.h"
 //得到温度值
 //返回值:温度值(扩大了100倍)
 short MPU_Get_Temperature(void)
@@ -70,6 +71,28 @@ u8 MPU_Get_Accelerometer(short *ax,short *ay,short *az)
 	} 	
   return res;;
 }
+
+u8 MPU_Get_Heading(short *mx, short *my, short *mz,double *heading)
+{
+  u8 res;  
+  short buf[3];
+  unsigned long sensor_timestamp;
+  float mag_sensitivity=0.15;
+  volatile float mag;
+	res=mpu_get_compass_reg(buf,&sensor_timestamp);
+	if(res==0)
+	{
+    *mx=((long)buf[0]*mag_sensitivity);
+    *my=((long)buf[1]*mag_sensitivity);
+    *mz=((long)buf[2]*mag_sensitivity); 
+    *heading =	atan2( 
+									(double) (   (int16_t)   (*mx +0)   ),
+									(double) (   (int16_t)   (*my -0)  )
+								)*(180/3.14159265)+180;
+	} 	
+  return res;;
+}
+
 //mpu连续写
 //addr:器件地址 
 //reg:寄存器地址

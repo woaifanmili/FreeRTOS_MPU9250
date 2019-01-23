@@ -3,7 +3,7 @@
  * Auto generated Run-Time-Environment Component Configuration File
  *      *** Do not modify ! ***
  *
- * Project: 'IMU_V2.0' 
+ * Project: 'IMU_V20' 
  * Target:  'IMU_V2.0' 
  */
 

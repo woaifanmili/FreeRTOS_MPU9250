@@ -35,3 +35,5 @@ imu_v2.0\mpu9250.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
 imu_v2.0\mpu9250.o: ..\Peripherals\sys\sys.h
 imu_v2.0\mpu9250.o: ..\Peripherals\delay\delay.h
 imu_v2.0\mpu9250.o: ..\Peripherals\HARDWARE\inc\iic.h
+imu_v2.0\mpu9250.o: ..\Peripherals\eMPL\inv_mpu.h
+imu_v2.0\mpu9250.o: E:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h

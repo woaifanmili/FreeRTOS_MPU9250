@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<JScopeProject>
+    <FileVersion major="1" minor="1" />
+    <Project>
+        <Configuration>
+            <JLink>
+                <Options IsRTTSession="0" IsRTTWithTimeStamp="1" SamplingPeriod="100" Connection="1" SerialNo="0" IP="" TargetDevice="STM32F405RG" TargetInterface="SWD" InterfaceSpeed="4000" />
+            </JLink>
+            <ElfFile Name="F:\IMU\8_IMU2.0\software\IMU2.0plusFreeRTOS\IMU_V20\MDK-ARM\IMU_V2.0\IMU_V20.axf" />
+            <DataFile Name="" />
+            <RawFile Name="" />
+            <Scope>
+                <Options TimeResolutionUs="5000000" />
+            </Scope>
+        </Configuration>
+        <Windows>
+            <Graph Show="1" />
+            <Watch Show="1" />
+        </Windows>
+        <SelectedSymbols>
+            <Symbol>
+                <Options Name="PITCH" Address="0x20000024" Type="int" TypeID="12" Size="4" GraphColorRed="255" GraphColorGreen="215" GraphColorBlue="0" YMinSampled="-7520" YMaxSampled="1116937280" YAvgSampled="63" Offset="4" ShowInGraph="1" YOffset="200" IsAutoConfig="0" YResolution="500" MaxValue="2000" File="../Src/main.c" Scope="0" DrawStyle="0" />
+            </Symbol>
+            <Symbol>
+                <Options Name="ROLL" Address="0x20000028" Type="int" TypeID="12" Size="4" GraphColorRed="0" GraphColorGreen="255" GraphColorBlue="0" YMinSampled="-17996" YMaxSampled="536989697" YAvgSampled="42" Offset="8" ShowInGraph="1" YOffset="200" IsAutoConfig="0" YResolution="500" MaxValue="2000" File="../Src/main.c" Scope="0" DrawStyle="0" />
+            </Symbol>
+            <Symbol>
+                <Options Name="YAW" Address="0x2000002C" Type="int" TypeID="12" Size="4" GraphColorRed="0" GraphColorGreen="0" GraphColorBlue="255" YMinSampled="-10123" YMaxSampled="508118896" YAvgSampled="930" Offset="12" ShowInGraph="1" YOffset="200" IsAutoConfig="0" YResolution="5000" MaxValue="1000000000" File="../Src/main.c" Scope="0" DrawStyle="0" />
+            </Symbol>
+        </SelectedSymbols>
+    </Project>
+</JScopeProject>

@@ -47,7 +47,7 @@ UNS32 sizeUNS32 = sizeof(UNS32);
 
 #define SYNC_PERIOD_SLAVE 20000    // ¦Ìs
 #define SYNC_PERIOD_MASTER 10000    // ¦Ìs
-#define PRODUCER_HEARTBEAT_TIME 10000  //ms
+#define PRODUCER_HEARTBEAT_TIME 400  //ms
 
 
 /** Prototypes for internals functions */

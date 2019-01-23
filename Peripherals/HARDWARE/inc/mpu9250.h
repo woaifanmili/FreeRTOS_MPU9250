@@ -92,7 +92,7 @@
 //如果AD0脚(9脚)接地,IIC地址为0X68(不包含最低位).
 //如果接V3.3,则IIC地址为0X69(不包含最低位).
 #define MPU_ADDR				0X68
-
+#define MAG_ADDR        0x0C   
 typedef struct {
   int16_t x;
   int16_t y;
@@ -127,6 +127,7 @@ u8 MPU_Read_Byte(u8 reg);						//IIC读一个字节
 short MPU_Get_Temperature(void);
 u8 MPU_Get_Gyroscope(short *gx,short *gy,short *gz);
 u8 MPU_Get_Accelerometer(short *ax,short *ay,short *az);
+u8 MPU_Get_Heading(short *mx, short *my, short *mz,double *heading);
 u8 MPU_ReadData(int16_t *accData,int16_t *gyroData);
 #endif
 
